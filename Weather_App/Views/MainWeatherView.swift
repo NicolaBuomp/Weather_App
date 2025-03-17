@@ -58,12 +58,29 @@ struct MainWeatherView: View {
             }
         }
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showSearch = true
+                    }) {
+                        Image(systemName: "line.horizontal.3")
+                            .foregroundColor(Color.white)
+                    }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showSearch = true
-                }) {
-                    Image(systemName: "magnifyingglass")
-                }
+                    Button(action: {
+                        showSearch = true
+                    }) {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(Color.white)
+                    }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showSearch = true
+                    }) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(Color.white)
+                    }
             }
         }
         .sheet(isPresented: $showSearch) {
@@ -71,8 +88,6 @@ struct MainWeatherView: View {
         }
         .edgesIgnoringSafeArea(.bottom)
     }
-    
-    // MARK: - Subviews
     
     // Definisce il gradiente di sfondo in base all'ora del giorno
     private var backgroundGradient: some View {
@@ -320,5 +335,11 @@ struct MainWeatherView: View {
             
             Spacer()
         }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        MainWeatherView()
     }
 }

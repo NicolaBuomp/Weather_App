@@ -28,7 +28,7 @@ class WeatherViewModel: ObservableObject {
         loadingState = .loading
         
         weatherService.fetchWeather(for: location)
-            .receive(on: DispatchQueue.main) // Assicuriamo che gli aggiornamenti UI avvengano sul thread principale
+            .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
                     switch completion {
@@ -51,7 +51,6 @@ class WeatherViewModel: ObservableObject {
         fetchWeather(for: searchLocation)
     }
     
-    // MARK: - Helper methods
     
     // Recupera la temperatura corrente formattata
     var currentTemperature: String {
