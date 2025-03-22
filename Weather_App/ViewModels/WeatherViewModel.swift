@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreLocation
 
 // Enum per tenere traccia dello stato di caricamento
 enum LoadingState {
@@ -14,11 +15,17 @@ class WeatherViewModel: ObservableObject {
     @Published var weatherData: WeatherResponse?
     @Published var loadingState: LoadingState = .idle
     @Published var searchLocation: String = Constants.defaultLocation
+    @Published var recentLocations: [String] = []
     
     private let weatherService = WeatherService()
     private var cancellables = Set<AnyCancellable>()
+    private let recentLocationsKey = "recentLocations"
+    private let maxRecentLocations = 5
     
     init() {
+        // Carichiamo le posizioni recenti da UserDefaults
+        loadRecentLocations()
+        
         // Carichiamo i dati del meteo per la località predefinita all'avvio
         fetchWeather(for: searchLocation)
     }
@@ -41,6 +48,9 @@ class WeatherViewModel: ObservableObject {
                 receiveValue: { [weak self] response in
                     self?.weatherData = response
                     self?.loadingState = .loaded
+                    
+                    // Aggiungiamo questa località alle posizioni recenti
+                    self?.addToRecentLocations(location: response.location.name)
                 }
             )
             .store(in: &cancellables)
@@ -51,6 +61,38 @@ class WeatherViewModel: ObservableObject {
         fetchWeather(for: searchLocation)
     }
     
+    // MARK: - Posizioni recenti
+    
+    // Metodo per aggiungere una località alle posizioni recenti
+    private func addToRecentLocations(location: String) {
+        // Rimuove la località se già presente
+        recentLocations.removeAll { $0.lowercased() == location.lowercased() }
+        
+        // Aggiungi la località all'inizio della lista
+        recentLocations.insert(location, at: 0)
+        
+        // Limita il numero di posizioni recenti
+        if recentLocations.count > maxRecentLocations {
+            recentLocations = Array(recentLocations.prefix(maxRecentLocations))
+        }
+        
+        // Salva le posizioni recenti
+        saveRecentLocations()
+    }
+    
+    // Carica le posizioni recenti da UserDefaults
+    private func loadRecentLocations() {
+        if let locations = UserDefaults.standard.array(forKey: recentLocationsKey) as? [String] {
+            recentLocations = locations
+        }
+    }
+    
+    // Salva le posizioni recenti in UserDefaults
+    private func saveRecentLocations() {
+        UserDefaults.standard.set(recentLocations, forKey: recentLocationsKey)
+    }
+    
+    // MARK: - Metodi di accesso ai dati meteo
     
     // Recupera la temperatura corrente formattata
     var currentTemperature: String {
@@ -116,5 +158,27 @@ class WeatherViewModel: ObservableObject {
     // Recupera le previsioni orarie per oggi
     var hourlyForecast: [Hour] {
         return weatherData?.forecast.forecastday.first?.hour ?? []
+    }
+    
+    // Recupera le coordinate correnti (utili per le funzionalità di preferiti)
+    var currentCoordinates: CLLocationCoordinate2D? {
+        guard let location = weatherData?.location else {
+            return nil
+        }
+        return CLLocationCoordinate2D(latitude: location.lat, longitude: location.lon)
+    }
+    
+    // Helper per creare un oggetto FavoriteCity dalla posizione corrente
+    func createFavoriteCity() -> FavoriteCity? {
+        guard let location = weatherData?.location else {
+            return nil
+        }
+        
+        return FavoriteCity(
+            name: location.name,
+            country: location.country,
+            latitude: location.lat,
+            longitude: location.lon
+        )
     }
 }

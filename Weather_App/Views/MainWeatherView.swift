@@ -3,7 +3,13 @@ import SwiftUI
 struct MainWeatherView: View {
     @ObservedObject var viewModel: WeatherViewModel
     @StateObject private var locationSearchViewModel = LocationSearchViewModel()
+    @StateObject private var favoritesViewModel: FavoriteCitiesViewModel
     @State private var scrollOffset: CGFloat = 0
+    
+    init(viewModel: WeatherViewModel) {
+        self.viewModel = viewModel
+        _favoritesViewModel = StateObject(wrappedValue: FavoriteCitiesViewModel(weatherViewModel: viewModel))
+    }
     
     var body: some View {
         ZStack {
@@ -63,13 +69,27 @@ struct MainWeatherView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
+                HStack {
                     Text(viewModel.weatherData?.location.name ?? "")
-                    .font(.system(size: 35))
+                        .font(.system(size: 35))
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                
+                        
+                    
+                        Button(action: {
+                            withAnimation {
+                                _ = favoritesViewModel.toggleCurrentCityFavorite()
+                            }
+                        }) {
+                            Image(systemName: favoritesViewModel.isCurrentCityFavorited ? "star.fill" : "star")
+                                .font(.system(size: 20))
+                                .foregroundColor(.yellow)
+                        }
+                    
+                }
+                .frame(maxWidth: 300, alignment: .leading)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
@@ -81,7 +101,7 @@ struct MainWeatherView: View {
                     }
                     .buttonStyle(ScaleButtonStyle())
                     
-                    NavigationLink(destination: FavoriteCityView()) {
+                    NavigationLink(destination: FavoriteCityView(weatherViewModel: viewModel)) {
                         Image(systemName: "list.star")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
@@ -91,13 +111,35 @@ struct MainWeatherView: View {
                 }
             }
         }
+        .onAppear {
+            // Forza il controllo dello stato dei preferiti quando la vista appare
+            if viewModel.weatherData != nil {
+                favoritesViewModel.checkCurrentCityFavoriteStatus()
+            }
+            
+            let standardAppearance = UINavigationBarAppearance()
+            standardAppearance.configureWithTransparentBackground()
+            
+            // Sfumatura sottile nella navigation bar quando si scorre
+            standardAppearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            standardAppearance.shadowColor = .clear
+            
+            // Navigation bar completamente trasparente all'inizio
+            let scrollEdgeAppearance = UINavigationBarAppearance()
+            scrollEdgeAppearance.configureWithTransparentBackground()
+            scrollEdgeAppearance.shadowColor = .clear
+            
+            UINavigationBar.appearance().standardAppearance = standardAppearance
+            UINavigationBar.appearance().scrollEdgeAppearance = scrollEdgeAppearance
+            UINavigationBar.appearance().compactAppearance = standardAppearance
+        }
         .edgesIgnoringSafeArea(.bottom)
         .onAppear {
             let standardAppearance = UINavigationBarAppearance()
             standardAppearance.configureWithTransparentBackground()
             
             // Sfumatura sottile nella navigation bar quando si scorre
-            standardAppearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            standardAppearance.backgroundEffect = UIBlurEffect(style: .systemThinMaterialLight)
             standardAppearance.shadowColor = .clear
             
             // Navigation bar completamente trasparente all'inizio

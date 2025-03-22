@@ -1,16 +1,10 @@
-//
-//  LocationSearchViewModel.swift
-//  Weather_App
-//
-//  Created by Nicola Buompane on 15/03/25.
-//
-
 import Foundation
 import Combine
 import CoreLocation
 
-struct LocationSuggestion: Identifiable {
-    let id = UUID()
+
+struct LocationSuggestion: Identifiable, Codable {
+    let id: UUID
     let name: String
     let country: String
     let latitude: Double
@@ -23,6 +17,23 @@ struct LocationSuggestion: Identifiable {
     var coordinates: String {
         return "\(latitude),\(longitude)"
     }
+    
+    // Fornisci un inizializzatore con ID generato automaticamente
+    init(id: UUID = UUID(), name: String, country: String, latitude: Double, longitude: Double) {
+        self.id = id
+        self.name = name
+        self.country = country
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+    
+    // Helper per verificare se questa suggestion corrisponde a una FavoriteCity
+    func matches(_ city: FavoriteCity) -> Bool {
+        return name == city.name &&
+               country == city.country &&
+               latitude == city.latitude &&
+               longitude == city.longitude
+    }
 }
 
 class LocationSearchViewModel: ObservableObject {
@@ -30,11 +41,17 @@ class LocationSearchViewModel: ObservableObject {
     @Published var suggestions: [LocationSuggestion] = []
     @Published var isSearching = false
     @Published var errorMessage: String?
+    @Published var recentSearches: [LocationSuggestion] = []
     
     private var cancellables = Set<AnyCancellable>()
     private let locationService = LocationService()
+    private let recentSearchesKey = "recentSearches"
+    private let maxRecentSearches = 5
     
     init() {
+        // Carica ricerche recenti
+        loadRecentSearches()
+        
         // Debounce search to avoid too many API calls
         $searchText
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
@@ -101,6 +118,53 @@ class LocationSearchViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
+    
+    // Aggiunge una suggestion alla cronologia di ricerca
+    func addToRecentSearches(_ suggestion: LocationSuggestion) {
+        // Rimuove se già presente
+        recentSearches.removeAll { $0.name == suggestion.name && $0.country == suggestion.country }
+        
+        // Aggiunge all'inizio
+        recentSearches.insert(suggestion, at: 0)
+        
+        // Limita il numero
+        if recentSearches.count > maxRecentSearches {
+            recentSearches = Array(recentSearches.prefix(maxRecentSearches))
+        }
+        
+        // Salva
+        saveRecentSearches()
+    }
+    
+    // Carica le ricerche recenti
+    private func loadRecentSearches() {
+        guard let data = UserDefaults.standard.data(forKey: recentSearchesKey) else {
+            return
+        }
+        
+        do {
+            let searches = try JSONDecoder().decode([LocationSuggestion].self, from: data)
+            recentSearches = searches
+        } catch {
+            errorMessage = "Errore nel caricamento delle ricerche recenti"
+        }
+    }
+    
+    // Salva le ricerche recenti
+    private func saveRecentSearches() {
+        do {
+            let data = try JSONEncoder().encode(recentSearches)
+            UserDefaults.standard.set(data, forKey: recentSearchesKey)
+        } catch {
+            errorMessage = "Errore nel salvataggio delle ricerche recenti"
+        }
+    }
+    
+    // Cancella la cronologia delle ricerche
+    func clearRecentSearches() {
+        recentSearches = []
+        UserDefaults.standard.removeObject(forKey: recentSearchesKey)
+    }
 }
 
 // Response model for location search API
@@ -113,4 +177,3 @@ struct LocationSearchResponse: Codable {
     let lon: Double
     let url: String
 }
-

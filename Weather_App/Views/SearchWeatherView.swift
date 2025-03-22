@@ -1,10 +1,3 @@
-//
-//  SearchWeatherView.swift
-//  Weather_App
-//
-//  Created by Nicola Buompane on 21/03/25.
-//
-
 import SwiftUI
 
 struct SearchWeatherView: View {
@@ -19,14 +12,16 @@ struct SearchWeatherView: View {
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
-                Button("Cerca") {
+                Button(action: {
+                    locationSearchViewModel.getCurrentLocation()
                     viewModel.searchLocation = locationSearchViewModel.searchText
                     viewModel.search()
+                }) {
+                    Image(systemName: "location.viewfinder")
+                        .font(.system(size: 30))
+                        .foregroundColor(.blue)
+                        .padding()
                 }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
             }
             .padding(.horizontal)
             
